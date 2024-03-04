@@ -201,24 +201,85 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                 );
-            let text_block = Paragraph::new(format!(
-                "HP: {}\nAttack: {}\nDefense: {}\nSp. Attack: {}\nSp. Defense: {}\nSpeed: {}",
-                poke.stats.hp,
-                poke.stats.attack,
-                poke.stats.defense,
-                poke.stats.sp_attack,
-                poke.stats.sp_defense,
-                poke.stats.speed
-            ))
-                .style(Style::default().fg(Color::White))
-                .block(
-                    Block::default()
-                        .title("Stats")
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                );
+
+            let stat_left = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![
+                    Constraint::Percentage(80),
+                    Constraint::Percentage(20),
+                ])
+                .split(d_pad[1]);
+            let stat_left_top = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(6),
+                    Constraint::Percentage(64),
+                ])
+                .split(stat_left[0]);
+
+
+            let hp_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::Green).bg(Color::DarkGray))
+                .label("HP")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.hp as f64 / 100.0).min(1.0));
+            frame.render_widget(hp_gauge, stat_left_top[0]);
+            let attack_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::Red).bg(Color::DarkGray))
+                .label("AT")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.attack as f64 / 100.0).min(1.0));
+            frame.render_widget(attack_gauge, stat_left_top[1]);
+            let def_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::Yellow).bg(Color::DarkGray))
+                .label("DF")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.defense as f64 / 100.0).min(1.0));
+            frame.render_widget(def_gauge, stat_left_top[2]);
+            let sp_attack_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::Magenta).bg(Color::DarkGray))
+                .label("SA")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.sp_attack as f64 / 100.0).min(1.0));
+            frame.render_widget(sp_attack_gauge, stat_left_top[3]);
+            let sp_defense_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::LightBlue).bg(Color::DarkGray))
+                .label("SD")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.sp_defense as f64 / 100.0).min(1.0));
+            frame.render_widget(sp_defense_gauge, stat_left_top[4]);
+            let speed_gauge = LineGauge::default()
+                .gauge_style(Style::default().fg(Color::Cyan).bg(Color::DarkGray))
+                .label("SP")
+                .line_set(symbols::line::THICK)
+                .ratio((poke.stats.speed as f64 / 100.0).min(1.0));
+            frame.render_widget(speed_gauge, stat_left_top[5]);
+
+            // let text_block = Paragraph::new(format!(
+            //     "HP: {}\nAttack: {}\nDefense: {}\nSp. Attack: {}\nSp. Defense: {}\nSpeed: {}",
+            //     poke.stats.hp,
+            //     poke.stats.attack,
+            //     poke.stats.defense,
+            //     poke.stats.sp_attack,
+            //     poke.stats.sp_defense,
+            //     poke.stats.speed
+            // ))
+            //     .style(Style::default().fg(Color::White))
+            //     .block(
+            //         Block::default()
+            //             .title("Stats")
+            //             .borders(Borders::ALL)
+            //             .border_type(BorderType::Rounded)
+            //     );
+
+
             frame.render_widget(image_block, pokedex[0]);
-            frame.render_widget(text_block, d_pad[1]);
+            // frame.render_widget(text_block, d_pad[1]);
             frame.render_widget(search_field, d_pad[0]);
         })?;
         //ANCHOR_END: draw
