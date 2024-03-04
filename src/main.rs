@@ -14,6 +14,16 @@ use serde_json::{Value, Error as JsonError};
 use serde::Deserialize;
 use std::fmt;
 use std::fmt::format;
+use std::{fs::File, io::{copy, Cursor}};
+use anyhow;
+use rascii_art::{render_to, RenderOptions};
+use rascii_art::charsets::*;
+
+use std::io::Read;
+use reqwest;
+use image::{DynamicImage, ImageFormat, ImageError};
+use ratatui::layout::Direction::{Horizontal, Vertical};
+use reqwest::get;
 // ANCHOR_END: imports
 
 // ANCHOR: setup
@@ -62,6 +72,20 @@ struct Sprites {
     no_gen_shiny: String,
 }
 
+async fn download_image_to(url: &str, file_name: &str) -> anyhow::Result<()> {
+    // Send an HTTP GET request to the URL
+    let response = reqwest::get(url).await?;
+    // Create a new file to write the downloaded image to
+    let mut file = File::create(file_name)?;
+
+    // Create a cursor that wraps the response body
+    let mut content =  Cursor::new(response.bytes().await?);
+    // Copy the content from the cursor to the file
+    copy(&mut content, &mut file)?;
+
+    Ok(())
+}
+
 async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn std::error::Error>> {
     let url = "https://absanthosh.github.io/PokedexData/PokemonData.json";
 
@@ -104,6 +128,15 @@ async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn std::
 #[tokio::main]
 async fn main() -> Result<()> {
 
+    let mut image_url = "https://img.pokemondb.net/sprites/black-white/normal/muk.png";
+    let file_name = "display.png";
+    match download_image_to(image_url, file_name).await {
+        Ok(_) => (),
+        Err(e) => println!("error while downloading image: {}", e),
+    }
+
+
+
     let mut poke_id = String::new();
     poke_id = poke_id.trim().to_string();
 
@@ -112,8 +145,8 @@ async fn main() -> Result<()> {
     let mut poke: Pokemon;
     // assign default values to the poke variable
     poke = Pokemon {
-        name: "Muk".to_string(),
-        description: "Welcome to the pokédex, your personal database of all pokemon you encounter in your travels".to_string(),
+        name: "Welcome to the pokédex, your personal database of all pokemon you encounter in your travels".to_string(),
+        description: "Enter to Search".to_string(),
         stats: Stats {
             hp: 0,
             attack: 0,
@@ -168,6 +201,16 @@ async fn main() -> Result<()> {
                 ])
                 .split(area);
 
+            let screen = Layout::default()
+                .direction(Vertical)
+                .constraints(vec![
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(60),
+                    Constraint::Percentage(20),
+                    Constraint::Min(0),
+                ])
+                .split(pokedex[0]);
+
             let d_pad = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints(vec![
@@ -176,15 +219,47 @@ async fn main() -> Result<()> {
                 ])
                 .split(pokedex[1]);
 
-            let image_block = Paragraph::new(format!("{}", poke.description))
+            let image_header = Paragraph::new(format!("{}", poke.name.to_ascii_uppercase()))
+                .wrap(Wrap { trim: true })
+                .alignment(Alignment::Center)
+                .style(Style::default()
+                    .fg(get_color_for_type(&poke.types[0])))
+                .block(
+                    Block::default()
+                        .title("Pokédex")
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                );
+
+            let mut buffer = String::new();
+            render_to(
+                "display.png",
+                &mut buffer,
+                &RenderOptions::new()
+                    .width(40)
+                    // .charset(&[".","@" ,"#"]),
+                    .charset(BLOCK)
+            )
+                .unwrap();
+
+            let screen_image = Paragraph::new(format!("{}", buffer))
+                .alignment(Alignment::Center)
+                .wrap(Wrap { trim: true })
+                .style(Style::default())
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                );
+            let image_footer = Paragraph::new(format!("{}", poke.description))
                 .wrap(Wrap { trim: true })
                 .style(Style::default().fg(get_color_for_type(&poke.types[0])))
                 .block(
                     Block::default()
-                        .title(format!("{}", poke.name))
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                 );
+
 
             // define a string variable with only underscores
             // it should check the length of the search_string and contain 4-n underscores in it
@@ -278,7 +353,9 @@ async fn main() -> Result<()> {
             //     );
 
 
-            frame.render_widget(image_block, pokedex[0]);
+            frame.render_widget(image_header, screen[0]);
+            frame.render_widget(screen_image, screen[1]);
+            frame.render_widget(image_footer, screen[2]);
             // frame.render_widget(text_block, d_pad[1]);
             frame.render_widget(search_field, d_pad[0]);
         })?;
@@ -305,6 +382,14 @@ async fn main() -> Result<()> {
                                     return Ok(());
                                 }
                             };
+
+                            image_url = &poke.sprites.misc[0];
+
+                            match download_image_to(image_url, file_name).await {
+                                Ok(_) => (),
+                                Err(e) => println!("error while downloading image: {}", e),
+                            }
+
                         },
                         KeyCode::Esc => break,
                         _ => continue,

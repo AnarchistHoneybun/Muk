@@ -12,3 +12,6 @@ serde_json = "1.0.114"
 tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
 crossterm = "0.27.0"
 ratatui = "0.24.0"
+anyhow = "1.0.80"
+rascii_art = "0.4.5"
+image = "0.24.7"
