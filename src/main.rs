@@ -91,9 +91,9 @@ async fn main() -> Result<()> {
     std::io::stdin().read_line(&mut poke_id).expect("Failed to read line");
     poke_id = poke_id.trim().to_string();
 
-    let poke_result = get_poke(poke_id).await;
+    let mut poke_result = get_poke(poke_id.clone()).await;
 
-    let poke: Pokemon = match poke_result {
+    let mut poke: Pokemon = match poke_result {
         Ok(poke_data) => poke_data,
         Err(e) => {
             println!("Error: {}", e);
@@ -105,6 +105,10 @@ async fn main() -> Result<()> {
     enable_raw_mode()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
+
+    // create a mutable string to use for the search field
+    let mut search_string: String = String::new();
+    search_string = "Search for a Pokemon".to_string();
 
     // ANCHOR_END: setup
 
@@ -123,7 +127,7 @@ async fn main() -> Result<()> {
                 dim = area.width;
             }
 
-            let outer = Layout::default()
+            let pokedex = Layout::default()
                 .direction(dir)
                 .constraints(vec![
                     Constraint::Percentage(50),
@@ -132,12 +136,28 @@ async fn main() -> Result<()> {
                 ])
                 .split(area);
 
+            let d_pad = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![
+                    Constraint::Percentage(20),
+                    Constraint::Percentage(80),
+                ])
+                .split(pokedex[1]);
+
             let image_block = Paragraph::new(format!("{}", poke.description))
                 .wrap(Wrap { trim: true })
                 .style(Style::default().fg(Color::Yellow))
                 .block(
                     Block::default()
                         .title(format!("{}", poke.name))
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Rounded)
+                );
+            let search_field = Paragraph::new(format!("{}", search_string))
+                .style(Style::default().fg(Color::Red))
+                .block(
+                    Block::default()
+                        .title("Search")
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                 );
@@ -157,8 +177,9 @@ async fn main() -> Result<()> {
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                 );
-            frame.render_widget(image_block, outer[0]);
-            frame.render_widget(text_block, outer[1]);
+            frame.render_widget(image_block, pokedex[0]);
+            frame.render_widget(text_block, d_pad[1]);
+            frame.render_widget(search_field, d_pad[0]);
         })?;
         //ANCHOR_END: draw
 
@@ -167,7 +188,23 @@ async fn main() -> Result<()> {
             if let event::Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        KeyCode::Char('q') => break,
+                        KeyCode::Char(x) => search_string.push(x),
+                        KeyCode::Backspace => {
+                            search_string.pop();
+                            ()
+                        },
+                        KeyCode::Enter => {
+                            poke_result = get_poke(search_string.clone()).await;
+
+                            poke = match poke_result {
+                                Ok(poke_data) => poke_data,
+                                Err(e) => {
+                                    println!("Error: {}", e);
+                                    return Ok(());
+                                }
+                            };
+                        },
+                        KeyCode::Esc => break,
                         _ => continue,
                     }
                 }
