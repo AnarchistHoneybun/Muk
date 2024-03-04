@@ -1,9 +1,11 @@
+use std::error::Error;
 // ANCHOR: imports
 use crossterm::{
     event::{self, KeyCode, KeyEventKind},
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
 };
+// use crossterm::style::Color;
 use ratatui::{prelude::*, widgets::*};
 use std::fs;
 use std::io::{stdout, Result};
@@ -15,6 +17,22 @@ use std::fmt::format;
 // ANCHOR_END: imports
 
 // ANCHOR: setup
+
+fn get_color_for_type(pokemon_type: &str) -> Color {
+    match pokemon_type {
+        "Fire" => Color::Red,
+        "Water" => Color::Blue,
+        "Grass" => Color::Green,
+        "Electric" => Color::Yellow,
+        "Psychic" => Color::Magenta,
+        "Poison" => Color::Magenta,
+        "Ice" => Color::Cyan,
+        "Dragon" => Color::LightRed,
+        "Dark" => Color::Black,
+        "Fairy" => Color::White,
+        _ => Color::White, // Default color for unknown types
+    }
+}
 
 #[derive(Deserialize)]
 struct Pokemon {
@@ -87,19 +105,33 @@ async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn std::
 async fn main() -> Result<()> {
 
     let mut poke_id = String::new();
-    println!("Enter the Pokemon ID:");
-    std::io::stdin().read_line(&mut poke_id).expect("Failed to read line");
     poke_id = poke_id.trim().to_string();
 
-    let mut poke_result = get_poke(poke_id.clone()).await;
+    let mut poke_result: std::result::Result<Pokemon, Box<dyn Error>>;
 
-    let mut poke: Pokemon = match poke_result {
-        Ok(poke_data) => poke_data,
-        Err(e) => {
-            println!("Error: {}", e);
-            return Ok(());
-        }
+    let mut poke: Pokemon;
+    // assign default values to the poke variable
+    poke = Pokemon {
+        name: "Muk".to_string(),
+        description: "Welcome to the pokédex, your personal database of all pokemon you encounter in your travels".to_string(),
+        stats: Stats {
+            hp: 0,
+            attack: 0,
+            defense: 0,
+            sp_attack: 0,
+            sp_defense: 0,
+            speed: 0,
+        },
+        types: vec!["Poison".to_string(), "Grass".to_string()],
+        ability: vec!["Overgrow".to_string(), "Chlorophyll".to_string()],
+        sprites: Sprites {
+            misc: vec!["".to_string()],
+            no_gen_normal: "https://absanthosh.github.io/PokedexData/Sprites/001MS.png".to_string(),
+            no_gen_shiny: "https://absanthosh.github.io/PokedexData/Sprites/001MS.png".to_string(),
+        },
+        evolution_chain: vec!["".to_string()],
     };
+
 
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
@@ -108,7 +140,7 @@ async fn main() -> Result<()> {
 
     // create a mutable string to use for the search field
     let mut search_string: String = String::new();
-    search_string = "Search for a Pokemon".to_string();
+    search_string = "".to_string();
 
     // ANCHOR_END: setup
 
@@ -146,14 +178,22 @@ async fn main() -> Result<()> {
 
             let image_block = Paragraph::new(format!("{}", poke.description))
                 .wrap(Wrap { trim: true })
-                .style(Style::default().fg(Color::Yellow))
+                .style(Style::default().fg(get_color_for_type(&poke.types[0])))
                 .block(
                     Block::default()
                         .title(format!("{}", poke.name))
                         .borders(Borders::ALL)
                         .border_type(BorderType::Rounded)
                 );
-            let search_field = Paragraph::new(format!("{}", search_string))
+
+            // define a string variable with only underscores
+            // it should check the length of the search_string and contain 4-n underscores in it
+            // where n is the length of the search_string
+
+            let filler = "_".repeat(4 - search_string.len());
+
+
+            let search_field = Paragraph::new(format!("{} {}", search_string, filler))
                 .style(Style::default().fg(Color::Red))
                 .block(
                     Block::default()
@@ -170,7 +210,7 @@ async fn main() -> Result<()> {
                 poke.stats.sp_defense,
                 poke.stats.speed
             ))
-                .style(Style::default().fg(Color::Magenta))
+                .style(Style::default().fg(Color::White))
                 .block(
                     Block::default()
                         .title("Stats")
@@ -195,6 +235,7 @@ async fn main() -> Result<()> {
                         },
                         KeyCode::Enter => {
                             poke_result = get_poke(search_string.clone()).await;
+                            search_string.clear();
 
                             poke = match poke_result {
                                 Ok(poke_data) => poke_data,
