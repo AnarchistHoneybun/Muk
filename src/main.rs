@@ -250,12 +250,12 @@ async fn main() -> Result<()> {
             let screen_image = Paragraph::new(format!("{}", buffer))
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: true })
-                .style(Style::default())
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .border_type(BorderType::Rounded)
-                );
+                .style(Style::default());
+                // .block(
+                //     Block::default()
+                //         .borders(Borders::ALL)
+                //         .border_type(BorderType::Rounded)
+                // );
             let image_footer = Paragraph::new(format!("{}", poke.description))
                 .wrap(Wrap { trim: true })
                 .style(Style::default().fg(get_color_for_type(&poke.types[0])))
@@ -377,6 +377,14 @@ async fn main() -> Result<()> {
                             ()
                         },
                         KeyCode::Enter => {
+
+                            // check search string length
+                            // if it is not equal to 4, pad it with zeroes
+                            if search_string.len() < 4 {
+                                search_string = format!("{:0>4}", search_string);
+                            }
+
+
                             poke_result = get_poke(search_string.clone()).await;
                             search_string.clear();
 
