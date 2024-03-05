@@ -301,6 +301,52 @@ async fn main() -> Result<()> {
                     Constraint::Percentage(64),
                 ])
                 .split(stat_left[0]);
+            let stat_left_bottom = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints(vec![
+                    Constraint::Percentage(30),
+                    Constraint::Percentage(70),
+                ])
+                .split(stat_left_top[6]);
+            let type_space = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                ])
+                .split(stat_left_bottom[0]);
+
+            if poke.types.len()==2 {
+                let type_1 = Paragraph::new(format!("{}",poke.types[0]))
+                    .alignment(Alignment::Center)
+                    .style(Style::default().fg(get_color_for_type(&poke.types[0])))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                    );
+                frame.render_widget(type_1, type_space[0]);
+                let type_2 = Paragraph::new(format!("{}",poke.types[1]))
+                    .alignment(Alignment::Center)
+                    .style(Style::default().fg(get_color_for_type(&poke.types[1])))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                    );
+                frame.render_widget(type_2, type_space[1]);
+            }else {
+                let type_1 = Paragraph::new(format!("{}",poke.types[0]))
+                    .alignment(Alignment::Center)
+                    .style(Style::default().fg(get_color_for_type(&poke.types[0])))
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .border_type(BorderType::Rounded)
+                    );
+                frame.render_widget(type_1, type_space[0]);
+            }
+
 
 
             let hp_gauge = LineGauge::default()
