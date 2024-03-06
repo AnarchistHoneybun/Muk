@@ -3,6 +3,7 @@ use std::{fs::File, io::{copy, Cursor}};
 use std::error::Error;
 use std::io::{Result, stdout};
 use std::io::Read;
+use std::rc::Rc;
 
 use anyhow;
 use crossterm::{
@@ -20,6 +21,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 mod color_lib;
+
 
 // ANCHOR_END: imports
 
@@ -168,7 +170,7 @@ async fn main() -> Result<()> {
             let area = frame.size();
             let dir;
             let dim;
-            if(area.height*3 < area.width) {
+            if area.height*3 < area.width {
                 dir = Horizontal;
                 dim = 50;
             }else{
@@ -216,14 +218,7 @@ async fn main() -> Result<()> {
                 );
 
             let mut buffer = String::new();
-            render_to(
-                "src/display_image/display.png",
-                &mut buffer,
-                &RenderOptions::new()
-                    .height(screen[1].height as u32)
-                    .charset(BLOCK)
-            )
-                .unwrap();
+            generate_graphic(&screen, &mut buffer);
 
             let screen_image = Paragraph::new(format!("{}", buffer))
                 .alignment(Alignment::Center)
@@ -419,4 +414,15 @@ async fn main() -> Result<()> {
     stdout().execute(LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
+}
+
+fn generate_graphic(screen: &Rc<[Rect]>, mut buffer: &mut String) {
+    render_to(
+        "src/display_image/display.png",
+        &mut buffer,
+        &RenderOptions::new()
+            .height(screen[1].height as u32)
+            .charset(BLOCK)
+    )
+        .unwrap();
 }
