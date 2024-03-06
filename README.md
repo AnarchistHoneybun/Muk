@@ -33,7 +33,7 @@ and you're golden!
   <summary><i>Dependencies</i></summary>
   <ul>
     <li><a href="https://www.rust-lang.org/">rust</a></li>
-    <li>[cargo](https://doc.rust-lang.org/cargo/)</li>
-    <li>[git](https://git-scm.com/)</li>
+    <li><a href="https://doc.rust-lang.org/cargo/">cargo</a></li>
+    <li><a href="https://git-scm.com/">git</a></li>
   </ul>
 </details>
