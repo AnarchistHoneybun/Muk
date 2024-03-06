@@ -4,5 +4,5 @@ Minimalist, unnecessary, and yet another pokédex, but this time in your favouri
 
 ---
 
-<img src="Attachments/capture_2.png" alt="vertical view" width="50%"/> <img src="Attachments/capture_2.png" alt="vertical view" width="50%"/>
+<img src="Attachments/capture_2.png" alt="vertical view" width="50%"/>
 <img src="Attachments/capture_4.png" alt="horizontal view" width="60%"/>
