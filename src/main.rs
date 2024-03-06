@@ -1,53 +1,30 @@
-use std::error::Error;
 // ANCHOR: imports
+use std::{fs::File, io::{copy, Cursor}};
+use std::error::Error;
+use std::io::{Result, stdout};
+use std::io::Read;
+
+use anyhow;
 use crossterm::{
     event::{self, KeyCode, KeyEventKind},
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-// use crossterm::style::Color;
-use ratatui::{prelude::*, widgets::*};
-use std::fs;
-use std::io::{stdout, Result};
-use std::rc::Rc;
-use serde_json::{Value, Error as JsonError};
-use serde::Deserialize;
-use std::fmt;
-use std::fmt::format;
-use std::{fs::File, io::{copy, Cursor}};
-use anyhow;
 use rascii_art::{render_to, RenderOptions};
 use rascii_art::charsets::*;
-
-use std::io::Read;
+use ratatui::{prelude::*, widgets::*};
+use ratatui::layout::Direction::Horizontal;
+use ratatui::layout::Direction::Vertical;
 use reqwest;
-use image::{DynamicImage, ImageFormat, ImageError};
-use ratatui::layout::Direction::{Horizontal, Vertical};
-use reqwest::get;
+use serde::Deserialize;
+use serde_json::Value;
+
+mod color_lib;
+
 // ANCHOR_END: imports
 
-// ANCHOR: setup
+// ANCHOR: structs
 
-fn get_color_for_type(pokemon_type: &str) -> Color {
-    match pokemon_type {
-        "Fire" => Color::Rgb(255, 102, 0),
-        "Water" => Color::Rgb(51, 204, 255),
-        "Grass" => Color::Rgb(0, 153, 0),
-        "Electric" => Color::Rgb(255, 255, 0),
-        "Psychic" => Color::Rgb(102, 102, 153),
-        "Poison" => Color::Rgb(102, 0, 204),
-        "Ice" => Color::Rgb(102, 255, 255),
-        "Dragon" => Color::Rgb(204, 0, 0),
-        "Bug" => Color::Rgb(102, 102, 51),
-        "Fighting" => Color::Rgb(153, 204, 255),
-        "Flying" => Color::Rgb(255, 204, 0),
-        "Ghost" => Color::Rgb(102, 0, 255),
-        "Ground" => Color::Rgb(153, 102, 51),
-        "Rock" => Color::Rgb(153, 102, 0),
-        "Normal" => Color::Rgb(255, 255, 255),
-        _ => Color::White, // Default color for unknown types
-    }
-}
 
 #[derive(Deserialize)]
 struct Pokemon {
@@ -77,6 +54,8 @@ struct Sprites {
     no_gen_shiny: String,
 }
 
+// ANCHOR_END: structs
+
 async fn download_image_to(url: &str, file_name: &str) -> anyhow::Result<()> {
     // Send an HTTP GET request to the URL
     let response = reqwest::get(url).await?;
@@ -91,7 +70,7 @@ async fn download_image_to(url: &str, file_name: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn std::error::Error>> {
+async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn Error>> {
     let url = "https://absanthosh.github.io/PokedexData/PokemonData.json";
 
     let response = reqwest::get(url).await?;
@@ -134,7 +113,7 @@ async fn get_poke(poke_id: String) -> std::result::Result<Pokemon, Box<dyn std::
 async fn main() -> Result<()> {
 
     let mut image_url = "https://img.pokemondb.net/sprites/black-white/normal/muk.png";
-    let file_name = "display.png";
+    let file_name = "src/display_image/display.png";
     match download_image_to(image_url, file_name).await {
         Ok(_) => (),
         Err(e) => println!("error while downloading image: {}", e),
@@ -170,17 +149,17 @@ async fn main() -> Result<()> {
         evolution_chain: vec!["".to_string()],
     };
 
+    // create a mutable string to use for the search field
+    let mut search_string: String = String::new();
+    search_string = "".to_string();
+
 
     stdout().execute(EnterAlternateScreen)?;
     enable_raw_mode()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
     terminal.clear()?;
 
-    // create a mutable string to use for the search field
-    let mut search_string: String = String::new();
-    search_string = "".to_string();
 
-    // ANCHOR_END: setup
 
     //ANCHOR: draw
 
@@ -190,10 +169,10 @@ async fn main() -> Result<()> {
             let dir;
             let dim;
             if(area.height*3 < area.width) {
-                dir = Direction::Horizontal;
+                dir = Horizontal;
                 dim = 50;
             }else{
-                dir = Direction::Vertical;
+                dir = Vertical;
                 dim = 60;
             }
 
@@ -217,7 +196,7 @@ async fn main() -> Result<()> {
                 .split(pokedex[0]);
 
             let d_pad = Layout::default()
-                .direction(Direction::Vertical)
+                .direction(Vertical)
                 .constraints(vec![
                     Constraint::Percentage(20),
                     Constraint::Percentage(80),
@@ -228,7 +207,7 @@ async fn main() -> Result<()> {
                 .wrap(Wrap { trim: true })
                 .alignment(Alignment::Center)
                 .style(Style::default()
-                    .fg(get_color_for_type(&poke.types[0])))
+                    .fg(color_lib::get_color_for_type(&poke.types[0])))
                 .block(
                     Block::default()
                         .title("Pokédex")
@@ -238,11 +217,10 @@ async fn main() -> Result<()> {
 
             let mut buffer = String::new();
             render_to(
-                "display.png",
+                "src/display_image/display.png",
                 &mut buffer,
                 &RenderOptions::new()
                     .height(screen[1].height as u32)
-                    // .charset(&[".","@" ,"#"]),
                     .charset(BLOCK)
             )
                 .unwrap();
@@ -251,14 +229,10 @@ async fn main() -> Result<()> {
                 .alignment(Alignment::Center)
                 .wrap(Wrap { trim: true })
                 .style(Style::default());
-                // .block(
-                //     Block::default()
-                //         .borders(Borders::ALL)
-                //         .border_type(BorderType::Rounded)
-                // );
+
             let image_footer = Paragraph::new(format!("{}", poke.description))
                 .wrap(Wrap { trim: true })
-                .style(Style::default().fg(get_color_for_type(&poke.types[0])))
+                .style(Style::default().fg(color_lib::get_color_for_type(&poke.types[0])))
                 .block(
                     Block::default()
                         .borders(Borders::ALL)
@@ -283,14 +257,14 @@ async fn main() -> Result<()> {
                 );
 
             let stat_left = Layout::default()
-                .direction(Direction::Horizontal)
+                .direction(Horizontal)
                 .constraints(vec![
                     Constraint::Percentage(80),
                     Constraint::Percentage(20),
                 ])
                 .split(d_pad[1]);
             let stat_left_top = Layout::default()
-                .direction(Direction::Vertical)
+                .direction(Vertical)
                 .constraints(vec![
                     Constraint::Percentage(6),
                     Constraint::Percentage(6),
@@ -302,14 +276,14 @@ async fn main() -> Result<()> {
                 ])
                 .split(stat_left[0]);
             let stat_left_bottom = Layout::default()
-                .direction(Direction::Vertical)
+                .direction(Vertical)
                 .constraints(vec![
                     Constraint::Percentage(30),
                     Constraint::Percentage(70),
                 ])
                 .split(stat_left_top[6]);
             let type_space = Layout::default()
-                .direction(Direction::Horizontal)
+                .direction(Horizontal)
                 .constraints(vec![
                     Constraint::Percentage(50),
                     Constraint::Percentage(50),
@@ -319,7 +293,7 @@ async fn main() -> Result<()> {
             if poke.types.len()==2 {
                 let type_1 = Paragraph::new(format!("{}",poke.types[0]))
                     .alignment(Alignment::Center)
-                    .style(Style::default().fg(get_color_for_type(&poke.types[0])))
+                    .style(Style::default().fg(color_lib::get_color_for_type(&poke.types[0])))
                     .block(
                         Block::default()
                             .borders(Borders::ALL)
@@ -328,7 +302,7 @@ async fn main() -> Result<()> {
                 frame.render_widget(type_1, type_space[0]);
                 let type_2 = Paragraph::new(format!("{}",poke.types[1]))
                     .alignment(Alignment::Center)
-                    .style(Style::default().fg(get_color_for_type(&poke.types[1])))
+                    .style(Style::default().fg(color_lib::get_color_for_type(&poke.types[1])))
                     .block(
                         Block::default()
                             .borders(Borders::ALL)
@@ -338,7 +312,7 @@ async fn main() -> Result<()> {
             }else {
                 let type_1 = Paragraph::new(format!("{}",poke.types[0]))
                     .alignment(Alignment::Center)
-                    .style(Style::default().fg(get_color_for_type(&poke.types[0])))
+                    .style(Style::default().fg(color_lib::get_color_for_type(&poke.types[0])))
                     .block(
                         Block::default()
                             .borders(Borders::ALL)
@@ -386,28 +360,10 @@ async fn main() -> Result<()> {
                 .ratio((poke.stats.speed as f64 / 100.0).min(1.0));
             frame.render_widget(speed_gauge, stat_left_top[5]);
 
-            // let text_block = Paragraph::new(format!(
-            //     "HP: {}\nAttack: {}\nDefense: {}\nSp. Attack: {}\nSp. Defense: {}\nSpeed: {}",
-            //     poke.stats.hp,
-            //     poke.stats.attack,
-            //     poke.stats.defense,
-            //     poke.stats.sp_attack,
-            //     poke.stats.sp_defense,
-            //     poke.stats.speed
-            // ))
-            //     .style(Style::default().fg(Color::White))
-            //     .block(
-            //         Block::default()
-            //             .title("Stats")
-            //             .borders(Borders::ALL)
-            //             .border_type(BorderType::Rounded)
-            //     );
-
 
             frame.render_widget(image_header, screen[0]);
             frame.render_widget(screen_image, screen[1]);
             frame.render_widget(image_footer, screen[2]);
-            // frame.render_widget(text_block, d_pad[1]);
             frame.render_widget(search_field, d_pad[0]);
         })?;
         //ANCHOR_END: draw
