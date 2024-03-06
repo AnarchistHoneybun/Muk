@@ -23,7 +23,7 @@ git clone https://github.com/AnarchistHoneybun/Muk.git
 cd Muk
 cargo run 
 ```
-after that, just type in the index of any generation 1 pokémon
+after that, just type in the index of any pokémon upto gen VIII (that's 1-898)
 and you're golden!
 
 
